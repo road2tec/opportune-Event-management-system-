@@ -22,6 +22,12 @@ export async function POST(req: NextRequest) {
     }
     const encryptedPassword = await bcrypt.hash(program.manager.password, 10);
     program.manager.password = encryptedPassword;
+
+    // Fallback programType to "other" if left empty or null
+    if (!program.programType || program.programType.trim() === "") {
+      program.programType = "other";
+    }
+
     const newProgram = new Program(program);
     newProgram.event = event._id;
     await newProgram.save();

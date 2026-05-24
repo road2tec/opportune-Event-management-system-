@@ -7,6 +7,7 @@ import {
   IconCoinRupee,
   IconMessageCircle,
   IconSettings,
+  IconBook,
 } from "@tabler/icons-react";
 
 export const SIDENAV_ITEMS: SideNavItem[] = [
@@ -19,6 +20,11 @@ export const SIDENAV_ITEMS: SideNavItem[] = [
     title: "Manage Programs",
     path: "/organizer/manage-programs",
     icon: <IconTrophy width="22" height="22" />,
+  },
+  {
+    title: "Planning Guides",
+    path: "/organizer/guides",
+    icon: <IconBook width="22" height="22" />,
   },
   {
     title: "Participants",

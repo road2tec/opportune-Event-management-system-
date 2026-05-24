@@ -1,6 +1,6 @@
 import Image from "next/image";
 import { Program } from "@/Types";
-import { IconCalendar, IconUsers } from "@tabler/icons-react";
+import { IconCalendar, IconUsers, IconCheck } from "@tabler/icons-react";
 import formatDate from "@/helper/FormatDate";
 import Link from "next/link";
 
@@ -52,12 +52,20 @@ export default function ProgramCard({ program }: { program: Program }) {
           >
             Read More
           </Link>
-          <Link
-            href={`/student/ongoing-events/program/${program.slug}`}
-            className="btn btn-sm btn-primary"
-          >
-            Participate
-          </Link>
+          {program.isRegistered ? (
+            <div
+              className="btn btn-sm btn-success text-white bg-emerald-600 border-none flex items-center justify-center gap-1 cursor-default opacity-100"
+            >
+              <IconCheck size={14} className="text-white" /> Registered
+            </div>
+          ) : (
+            <Link
+              href={`/student/ongoing-events/program/${program.slug}`}
+              className="btn btn-sm btn-primary"
+            >
+              Participate
+            </Link>
+          )}
         </div>
       </div>
     </div>

@@ -121,43 +121,82 @@ export default function ManageProgramPage() {
 
   const validateProgram = () => {
     const p = newProgram;
-    if (!p.title) return toast.error("Program title is required"), false;
-    if (!p.slug) return toast.error("Program slug is required"), false;
-    if (!p.description)
+    console.log("Starting program validation. Form state:", p);
+
+    if (!p.title) {
+      console.warn("Validation failed: Program title is missing.");
+      return toast.error("Program title is required"), false;
+    }
+    if (!p.slug) {
+      console.warn("Validation failed: Program slug is missing.");
+      return toast.error("Program slug is required"), false;
+    }
+    if (!p.description) {
+      console.warn("Validation failed: Program description is missing.");
       return toast.error("Program description is required"), false;
-    if (!p.manager.name) return toast.error("Manager name is required"), false;
-    if (!p.manager.email)
+    }
+    if (!p.programType) {
+      console.warn("Validation failed: Program type is missing.");
+      return toast.error("Program type is required"), false;
+    }
+    if (!p.manager.name) {
+      console.warn("Validation failed: Manager name is missing.");
+      return toast.error("Manager name is required"), false;
+    }
+    if (!p.manager.email) {
+      console.warn("Validation failed: Manager email is missing.");
       return toast.error("Manager email is required"), false;
-    if (!p.manager.phone)
+    }
+    if (!p.manager.phone) {
+      console.warn("Validation failed: Manager phone is missing.");
       return toast.error("Manager phone is required"), false;
-    if (!p.coverImage)
+    }
+    if (!p.coverImage) {
+      console.warn("Validation failed: Program cover image is missing (Did you click the blue 'Upload' button?).");
       return toast.error("Program cover image is required"), false;
-    if (!p.manager.password) return toast.error("Password is required"), false;
-    if (p.manager.password !== p.manager.confirmPassword)
+    }
+    if (!p.manager.password) {
+      console.warn("Validation failed: Password is missing.");
+      return toast.error("Password is required"), false;
+    }
+    if (p.manager.password !== p.manager.confirmPassword) {
+      console.warn(`Validation failed: Passwords do not match. Password: "${p.manager.password}", Confirm: "${p.manager.confirmPassword}"`);
       return toast.error("Passwords do not match"), false;
+    }
+    
+    console.log("Validation successful! Submitting form...");
     return true;
   };
 
   const handleAddProgram = async () => {
-    if (!validateProgram()) return;
+    console.log("handleAddProgram button clicked!");
+    if (!validateProgram()) {
+      console.log("handleAddProgram stopped: validation failed.");
+      return;
+    }
     try {
       setLoading(true);
       (
         document.getElementById("add-program-modal") as HTMLDialogElement
       ).close();
+      console.log("Sending POST request to /api/programs/add-program with payload:", newProgram);
       const res = axios.post("/api/programs/add-program", {
         program: newProgram,
       });
       toast.promise(res, {
         loading: "Adding program...",
         success: (data: AxiosResponse) => {
+          console.log("Program added successfully! Response:", data);
           fetchPrograms();
           return "Program added successfully!";
         },
-        error: (err: unknown) => `Error: ${err}`,
+        error: (err: unknown) => {
+          console.error("Program addition failed:", err);
+          return `Error: ${err}`;
+        },
       });
     } catch (error) {
-      console.error(error);
+      console.error("Catastrophic error in handleAddProgram:", error);
     } finally {
       setLoading(false);
     }
@@ -532,13 +571,14 @@ export default function ManageProgramPage() {
                 className="input input-bordered w-full"
                 placeholder="e.g. 3"
                 min={1}
-                value={newProgram.roundsCount}
-                onChange={(e) =>
+                value={newProgram.roundsCount || ""}
+                onChange={(e) => {
+                  const val = parseInt(e.target.value, 10) || 0;
                   setNewProgram({
                     ...newProgram,
-                    roundsCount: parseInt(e.target.value, 10),
+                    roundsCount: val,
                     rounds: Array.from(
-                      { length: parseInt(e.target.value, 10) },
+                      { length: val || 1 },
                       (_, i) => ({
                         name: `Round ${i + 1}`,
                         order: i + 1,
@@ -550,8 +590,8 @@ export default function ManageProgramPage() {
                         maxScore: 0,
                       })
                     ),
-                  })
-                }
+                  });
+                }}
               />
             </fieldset>
             {newProgram.roundsCount > 0 && (
@@ -596,11 +636,11 @@ export default function ManageProgramPage() {
                   className="input input-bordered w-full"
                   placeholder="e.g. 50"
                   min={1}
-                  value={newProgram.maxTeams}
+                  value={newProgram.maxTeams || ""}
                   onChange={(e) =>
                     setNewProgram({
                       ...newProgram,
-                      maxTeams: parseInt(e.target.value, 10),
+                      maxTeams: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -615,11 +655,11 @@ export default function ManageProgramPage() {
                   className="input input-bordered w-full"
                   placeholder="e.g. 500"
                   min={0}
-                  value={newProgram.pricePerTeam}
+                  value={newProgram.pricePerTeam || ""}
                   onChange={(e) =>
                     setNewProgram({
                       ...newProgram,
-                      pricePerTeam: parseInt(e.target.value, 10),
+                      pricePerTeam: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />
@@ -636,13 +676,13 @@ export default function ManageProgramPage() {
                       className="input input-bordered w-full"
                       placeholder="Min"
                       min={1}
-                      value={newProgram.teamSize.min}
+                      value={newProgram.teamSize.min || ""}
                       onChange={(e) =>
                         setNewProgram({
                           ...newProgram,
                           teamSize: {
                             ...newProgram.teamSize,
-                            min: parseInt(e.target.value, 10),
+                            min: parseInt(e.target.value, 10) || 0,
                           },
                         })
                       }
@@ -652,13 +692,13 @@ export default function ManageProgramPage() {
                       className="input input-bordered w-full"
                       placeholder="Max"
                       min={1}
-                      value={newProgram.teamSize.max}
+                      value={newProgram.teamSize.max || ""}
                       onChange={(e) =>
                         setNewProgram({
                           ...newProgram,
                           teamSize: {
                             ...newProgram.teamSize,
-                            max: parseInt(e.target.value, 10),
+                            max: parseInt(e.target.value, 10) || 0,
                           },
                         })
                       }
@@ -777,11 +817,11 @@ export default function ManageProgramPage() {
                   className="input input-bordered w-full"
                   placeholder="Amount (in ₹)"
                   min={0}
-                  value={prizes.amount}
+                  value={prizes.amount || ""}
                   onChange={(e) =>
                     setPrizes({
                       ...prizes,
-                      amount: parseInt(e.target.value, 10),
+                      amount: parseInt(e.target.value, 10) || 0,
                     })
                   }
                 />

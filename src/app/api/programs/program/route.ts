@@ -1,4 +1,8 @@
 import Program from "@/models/Program";
+import Event from "@/models/Event";
+import College from "@/models/College";
+import Team from "@/models/Team";
+import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function GET(req: NextRequest) {
@@ -23,7 +27,35 @@ export async function GET(req: NextRequest) {
         { status: 404 }
       );
     }
-    return NextResponse.json(program, { status: 200 });
+
+    // Check if logged-in student is already registered for this program
+    let isRegistered = false;
+    try {
+      const token = req.cookies.get("token")?.value;
+      if (token) {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET!) as {
+          id: string;
+          role: string;
+        };
+        if (decoded && decoded.role === "student") {
+          const registeredTeam = await Team.findOne({
+            program: program._id,
+            members: decoded.id
+          });
+          if (registeredTeam) {
+            isRegistered = true;
+          }
+        }
+      }
+    } catch (e) {
+      // Ignore token decoding errors
+    }
+
+    // Inject isRegistered flag dynamically
+    const programObj = program.toObject();
+    programObj.isRegistered = isRegistered;
+
+    return NextResponse.json(programObj, { status: 200 });
   } catch (error) {
     console.log("Error in fetching program details", error);
     return NextResponse.json(

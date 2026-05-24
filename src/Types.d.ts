@@ -107,6 +107,7 @@ export interface Program {
   popularityScore?: number;
   textSummary?: string;
   embeddingId?: string;
+  isRegistered?: boolean;
 }
 
 export interface Student {
