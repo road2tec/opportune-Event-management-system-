@@ -75,7 +75,8 @@ export default function ManageProgramPage() {
   // Email verification states
   const [otpSent, setOtpSent] = useState("");
   const [isEmailVerified, setIsEmailVerified] = useState(false);
-  const [otpInput, setOtpInput] = useState("");
+  const [otpArray, setOtpArray] = useState<string[]>(["", "", "", "", "", ""]);
+  const [otpFeedback, setOtpFeedback] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
 
   const verifyManagerEmail = async () => {
     const email = newProgram.manager.email;
@@ -958,7 +959,10 @@ export default function ManageProgramPage() {
               <button 
                 type="button"
                 className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-base-content hover:text-primary transition duration-200"
-                onClick={() => (document.getElementById("otpContainer") as HTMLDialogElement).close()}
+                onClick={() => {
+                  setOtpFeedback({ type: "", message: "" });
+                  (document.getElementById("otpContainer") as HTMLDialogElement).close();
+                }}
               >
                 ✕
               </button>
@@ -967,27 +971,32 @@ export default function ManageProgramPage() {
               </h3>
               
               <div className="flex justify-center gap-3">
-                {[...Array(6)].map((_, index) => (
+                {otpArray.map((digit, index) => (
                   <input
                     key={index}
                     type="text"
                     maxLength={1}
                     className="input input-bordered input-primary text-center w-11 h-11 text-lg font-semibold placeholder:text-base-content/40"
-                    value={otpInput[index] || ""}
+                    value={digit}
                     onChange={(e) => {
                       const value = e.target.value;
                       if (/^\d$/.test(value) || value === "") {
-                        const otp = otpInput.split("");
-                        otp[index] = value;
-                        setOtpInput(otp.join(""));
+                        const newOtp = [...otpArray];
+                        newOtp[index] = value;
+                        setOtpArray(newOtp);
                         if (value && index < 5) {
                           document.getElementById(`otp-input-${index + 1}`)?.focus();
                         }
                       }
                     }}
                     onKeyDown={(e) => {
-                      if (e.key === "Backspace" && !otpInput[index] && index > 0) {
-                        document.getElementById(`otp-input-${index - 1}`)?.focus();
+                      if (e.key === "Backspace") {
+                        if (!otpArray[index] && index > 0) {
+                          const newOtp = [...otpArray];
+                          newOtp[index - 1] = "";
+                          setOtpArray(newOtp);
+                          document.getElementById(`otp-input-${index - 1}`)?.focus();
+                        }
                       }
                     }}
                     id={`otp-input-${index}`}
@@ -1001,11 +1010,19 @@ export default function ManageProgramPage() {
                 className="btn btn-primary w-full mt-4 py-2 text-white font-bold"
                 onClick={(e) => {
                   e.preventDefault();
-                  if (otpInput.length === 6 && otpInput === otpSent) {
+                  const enteredOtp = otpArray.join("");
+                  if (enteredOtp.length === 6 && enteredOtp === otpSent) {
                     setIsEmailVerified(true);
-                    (document.getElementById("otpContainer") as HTMLDialogElement).close();
+                    setOtpFeedback({
+                      type: "success",
+                      message: "Program Manager Email Verified Successfully!",
+                    });
                     toast.success("Program Manager Email Verified!");
                   } else {
+                    setOtpFeedback({
+                      type: "error",
+                      message: "Invalid OTP code! Please check and try again.",
+                    });
                     toast.error("Invalid OTP! Please try again.");
                   }
                 }}
@@ -1013,6 +1030,43 @@ export default function ManageProgramPage() {
                 Verify OTP
               </button>
             </div>
+
+            {/* Custom High-Fidelity Feedback Dialog to ensure popup is displayed in Browser's top-layer */}
+            {otpFeedback.type !== "" && (
+              <div className="fixed inset-0 z-[999999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+                <div className={`bg-base-100 border ${otpFeedback.type === "success" ? "border-success" : "border-error"} rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fadeIn poppins`}>
+                  <div className={`w-16 h-16 ${otpFeedback.type === "success" ? "bg-success/20 text-success" : "bg-error/20 text-error"} rounded-full flex items-center justify-center mx-auto`}>
+                    {otpFeedback.type === "success" ? (
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                      </svg>
+                    ) : (
+                      <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    )}
+                  </div>
+                  <h3 className={`text-xl font-bold font-outfit ${otpFeedback.type === "success" ? "text-success" : "text-error"}`}>
+                    {otpFeedback.type === "success" ? "Verification Successful!" : "Verification Failed!"}
+                  </h3>
+                  <p className="text-sm text-base-content/70 leading-relaxed">
+                    {otpFeedback.message}
+                  </p>
+                  <button 
+                    onClick={() => {
+                      const isSuccess = otpFeedback.type === "success";
+                      setOtpFeedback({ type: "", message: "" });
+                      if (isSuccess) {
+                        (document.getElementById("otpContainer") as HTMLDialogElement).close();
+                      }
+                    }} 
+                    className={`btn ${otpFeedback.type === "success" ? "btn-success" : "btn-error"} btn-sm w-full rounded-xl text-white`}
+                  >
+                    {otpFeedback.type === "success" ? "Done" : "Try Again"}
+                  </button>
+                </div>
+              </div>
+            )}
           </dialog>
         </div>
       </dialog>
