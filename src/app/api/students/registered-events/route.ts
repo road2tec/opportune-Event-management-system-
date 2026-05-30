@@ -28,6 +28,8 @@ export async function GET(req: NextRequest) {
 
     // Find all Teams where the logged-in student is a member (either leader or teammate)
     const teams = await Team.find({ members: studentId })
+      .populate("members", "name email phone profileImage")
+      .populate("leader", "name email phone profileImage")
       .populate({
         path: "program",
         populate: {

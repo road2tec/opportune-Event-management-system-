@@ -4,6 +4,8 @@ import { NextRequest, NextResponse } from "next/server";
 import Program from "@/models/Program";
 import Team from "@/models/Team";
 import Student from "@/models/Student";
+import Payment from "@/models/Payment";
+import crypto from "crypto";
 
 dbConfig();
 
@@ -30,15 +32,47 @@ export async function POST(req: NextRequest) {
     }
 
     const body = await req.json();
-    const { action, programId, teamName, teamCode, teamPassword } = body;
+    const { action, programId, teamName, teamCode, teamPassword, razorpay_order_id, razorpay_payment_id, razorpay_signature } = body;
 
     if (!programId) {
       return NextResponse.json({ message: "Program ID is required" }, { status: 400 });
     }
 
-    const program = await Program.findById(programId);
+    const program = await Program.findById(programId).populate("event");
     if (!program) {
       return NextResponse.json({ message: "Program not found" }, { status: 404 });
+    }
+
+    // Payment signature verification for paid programs (individual or team leader pays)
+    const price = program.pricePerTeam || 0;
+    if (price > 0 && (action === "individual" || action === "create-team")) {
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return NextResponse.json({ message: "Payment verification details are required for this program" }, { status: 400 });
+      }
+
+      const bodyData = razorpay_order_id + "|" + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac("sha256", process.env.RAZORPAY_KEY_SECRET || "eIco6L2xvGHf2H32RuKhG20G")
+        .update(bodyData.toString())
+        .digest("hex");
+
+      if (expectedSignature !== razorpay_signature) {
+        return NextResponse.json({ message: "Payment signature verification failed. Transaction unauthorized." }, { status: 400 });
+      }
+
+      // Log Payment transaction
+      const newPayment = new Payment({
+        payer: studentId,
+        college: program.event?.college || null,
+        event: program.event?._id || null,
+        program: programId,
+        amount: price,
+        platformCut: Math.round(price * 0.1),
+        paymentGatewayRef: razorpay_payment_id,
+        status: "paid",
+        createdAt: new Date(),
+      });
+      await newPayment.save();
     }
 
     // 1. INDIVIDUAL PARTICIPATION

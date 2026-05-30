@@ -1,18 +1,63 @@
 "use client";
-
 import { IconMenu3 } from "@tabler/icons-react";
 import Link from "next/link";
 import ThemeToggler from "./ThemeToggler";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/context/AuthContext";
+import axios from "axios";
+import { useEffect } from "react";
+import toast from "react-hot-toast";
 
-export default function () {
-  // getting the current path
+export default function Navbar() {
   const currentPath = usePathname();
+  const router = useRouter();
+  const { user, setUser } = useAuth();
+
   const links = [
     { name: "About", href: "/#about" },
     { name: "Features", href: "/#features" },
     { name: "Contact Us", href: "/#contact" },
   ];
+
+  // Dynamically fetch user session on load if not already present
+  useEffect(() => {
+    const verifySession = async () => {
+      try {
+        const res = await axios.get("/api/auth/verifytoken");
+        if (res.data && res.data.user) {
+          setUser(res.data.user);
+        }
+      } catch (e) {
+        // Ignore session verify errors
+      }
+    };
+    verifySession();
+  }, [setUser]);
+
+  const handleLogout = async () => {
+    toast.promise(axios.get("/api/auth/logout"), {
+      loading: "Logging out...",
+      success: () => {
+        setUser(null);
+        router.push("/");
+        router.refresh();
+        return "Logged out successfully";
+      },
+      error: "Error logging out",
+    });
+  };
+
+  const getDashboardHref = () => {
+    if (!user) return "/";
+    const role = (user as any).role?.toLowerCase();
+    if (role === "student") return "/student/dashboard";
+    if (role === "college") return "/college/dashboard";
+    if (role === "organizer") return "/organizer/dashboard";
+    if (role === "program-manager") return "/program-manager/dashboard";
+    if (role === "admin") return "/admin/dashboard";
+    return "/";
+  };
+
   return (
     <div
       className={`navbar bg-background/80 backdrop-blur-lg border-b border-border Orbitron lg:px-10 text-base-content ${
@@ -35,7 +80,7 @@ export default function () {
             ))}
           </ul>
         </div>
-        <Link href="/" className="space-x-3 flex items-center">
+        <Link href={user ? getDashboardHref() : "/"} className="space-x-3 flex items-center">
           <div className="flex flex-col items-start gap-1">
             <div className="flex items-center gap-[2px]">
               <img
@@ -68,12 +113,25 @@ export default function () {
       </div>
       <div className="navbar-end gap-2">
         <ThemeToggler />
-        <Link href="/register" className="btn btn-secondary btn-outline">
-          Sign Up
-        </Link>
-        <Link href="/login" className="btn btn-accent">
-          Login
-        </Link>
+        {user ? (
+          <>
+            <Link href={getDashboardHref()} className="btn btn-accent">
+              Dashboard
+            </Link>
+            <button onClick={handleLogout} className="btn btn-secondary btn-outline">
+              Log Out
+            </button>
+          </>
+        ) : (
+          <>
+            <Link href="/register" className="btn btn-secondary btn-outline">
+              Sign Up
+            </Link>
+            <Link href="/login" className="btn btn-accent">
+              Login
+            </Link>
+          </>
+        )}
       </div>
     </div>
   );

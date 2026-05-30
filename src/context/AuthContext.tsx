@@ -1,3 +1,4 @@
+"use client";
 import { Admin, College, Event, Program, Student } from "@/Types";
 import { createContext, useContext, useState, ReactNode } from "react";
 

@@ -8,6 +8,7 @@ import {
   IconMessageCircle,
   IconSettings,
   IconBook,
+  IconSparkles
 } from "@tabler/icons-react";
 
 export const SIDENAV_ITEMS: SideNavItem[] = [
@@ -40,6 +41,11 @@ export const SIDENAV_ITEMS: SideNavItem[] = [
     title: "Feedback & Reviews",
     path: "/organizer/feedback",
     icon: <IconMessageCircle width="22" height="22" />,
+  },
+  {
+    title: "Smart Scheduling AI",
+    path: "/organizer/scheduling",
+    icon: <IconSparkles width="22" height="22" />,
   },
   {
     title: "Settings",

@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import "../globals.css";
 import { Toaster } from "react-hot-toast";
 import Footer from "@/components/Footer";
+import { AuthProvider } from "@/context/AuthContext";
 
 export default function RootLayout({
   children,
@@ -30,10 +31,12 @@ export default function RootLayout({
         />
       </head>
       <body className={`antialiased`}>
-        <Toaster />
-        <Navbar />
-        {children}
-        <Footer />
+        <AuthProvider>
+          <Toaster />
+          <Navbar />
+          {children}
+          <Footer />
+        </AuthProvider>
       </body>
     </html>
   );

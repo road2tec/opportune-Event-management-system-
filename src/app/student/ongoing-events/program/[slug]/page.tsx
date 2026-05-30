@@ -58,6 +58,20 @@ export default function ProgramReadMorePage() {
     if (slug) fetchProgramDetails(slug as string);
   }, [slug]);
 
+  const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+      if (typeof window !== "undefined" && (window as any).Razorpay) {
+        resolve(true);
+        return;
+      }
+      const script = document.createElement("script");
+      script.src = "https://checkout.razorpay.com/v1/checkout.js";
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+  };
+
   // Handle Participation Action Submit
   const handleParticipate = async (actionType: "individual" | "create-team" | "join-team") => {
     if (!program) return;
@@ -74,6 +88,90 @@ export default function ProgramReadMorePage() {
 
     setSubmitting(true);
     try {
+      const price = program.pricePerTeam || 0;
+
+      // Paid event and not joining a team -> Open Razorpay Checkout popup
+      if (price > 0 && actionType !== "join-team") {
+        const loaded = await loadRazorpayScript();
+        if (!loaded) {
+          toast.error("Failed to load payment gateway. Please check your network.");
+          setSubmitting(false);
+          return;
+        }
+
+        // Get Razorpay order from server
+        const orderRes = await axios.post("/api/payment/create-order", {
+          programId: program._id,
+        });
+
+        if (!orderRes.data.success) {
+          toast.error("Failed to generate payment order. Please try again.");
+          setSubmitting(false);
+          return;
+        }
+
+        const { orderId, amount, currency, keyId } = orderRes.data;
+
+        const options = {
+          key: keyId,
+          amount: amount,
+          currency: currency,
+          name: "UniSync",
+          description: `Registration fee for ${program.title}`,
+          order_id: orderId,
+          handler: async function (response: any) {
+            setSubmitting(true);
+            try {
+              const payload = {
+                action: actionType,
+                programId: program._id,
+                teamName,
+                teamCode,
+                teamPassword,
+                razorpay_order_id: response.razorpay_order_id,
+                razorpay_payment_id: response.razorpay_payment_id,
+                razorpay_signature: response.razorpay_signature,
+              };
+
+              const res = await axios.post("/api/programs/participate", payload);
+              toast.success(res.data.message || "Registration Successful!");
+
+              if (actionType === "create-team") {
+                setCreatedTeam(res.data.team);
+                setModalAction("success");
+              } else {
+                setShowModal(false);
+                fetchProgramDetails(slug as string);
+              }
+            } catch (error: any) {
+              console.error(error);
+              const errMsg = error.response?.data?.message || "Payment verified but registration failed.";
+              toast.error(errMsg);
+            } finally {
+              setSubmitting(false);
+            }
+          },
+          modal: {
+            ondismiss: function () {
+              toast.error("Payment cancelled by user");
+              setSubmitting(false);
+            },
+          },
+          prefill: {
+            name: "",
+            email: "",
+          },
+          theme: {
+            color: "#7c3aed",
+          },
+        };
+
+        const rzp = new (window as any).Razorpay(options);
+        rzp.open();
+        return;
+      }
+
+      // Free events or join-team flows
       const payload = {
         action: actionType,
         programId: program._id,

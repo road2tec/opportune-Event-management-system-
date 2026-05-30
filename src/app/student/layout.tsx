@@ -6,6 +6,7 @@ import { Toaster } from "react-hot-toast";
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { useEffect } from "react";
 import SideNav from "./SideNav";
+import AIChatbot from "@/components/AIChatbot";
 
 const Component = ({ children }: { children: React.ReactNode }) => {
   const { setUser } = useAuth();
@@ -22,7 +23,7 @@ const Component = ({ children }: { children: React.ReactNode }) => {
     <html lang="en">
       <head>
         <title>
-          Program Manager | Opportune | One Platform. Infinite Opportunities
+          Student Dashboard | Opportune | One Platform. Infinite Opportunities
         </title>
         <meta
           name="description"
@@ -45,7 +46,10 @@ const Component = ({ children }: { children: React.ReactNode }) => {
         <div className="absolute top-0 left-0 right-0 z-50">
           <Toaster />
         </div>
-        <SideNav className="poppins">{children}</SideNav>
+        <SideNav className="poppins">
+          {children}
+        </SideNav>
+        <AIChatbot />
       </body>
     </html>
   );

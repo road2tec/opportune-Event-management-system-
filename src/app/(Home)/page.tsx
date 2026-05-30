@@ -33,14 +33,14 @@ export default function LandingPage() {
               <strong>Join us today!</strong>
             </p>
             <a
-              href="/explore-events"
+              href="/student/ongoing-events"
               className="btn btn-primary text-base font-medium text-center rounded-lg mr-4"
             >
               Explore Events
               <IconCircleChevronRight />
             </a>
             <a
-              href="/sign-up"
+              href="/register"
               className="btn btn-outline text-base font-medium text-center rounded-lg mr-4"
             >
               Get Started for Free

@@ -27,6 +27,7 @@ export default function RegisterPage() {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [image, setImage] = useState<File | null>(null);
   const [college, setCollege] = useState<College[]>([]);
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false);
   const router = useRouter();
 
   const fetchColleges = async () => {
@@ -98,6 +99,7 @@ export default function RegisterPage() {
             ...student,
             [path]: data.data.path,
           });
+          setShowUploadSuccess(true);
           return "Image Uploaded Successfully";
         },
         error: (err: unknown) => `This just happened: ${err}`,
@@ -420,6 +422,28 @@ export default function RegisterPage() {
           </button>
         </div>
       </dialog>
+
+      {showUploadSuccess && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-base-100 border border-success rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fadeIn poppins">
+            <div className="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center mx-auto">
+              <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-xl font-bold font-outfit text-success">Image Uploaded!</h3>
+            <p className="text-sm text-base-content/70 leading-relaxed">
+              Your profile image has been uploaded successfully and linked to your registration form!
+            </p>
+            <button 
+              onClick={() => setShowUploadSuccess(false)} 
+              className="btn btn-success btn-sm w-full rounded-xl text-white"
+            >
+              Great, thanks!
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 }

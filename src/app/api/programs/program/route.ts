@@ -4,6 +4,9 @@ import College from "@/models/College";
 import Team from "@/models/Team";
 import jwt from "jsonwebtoken";
 import { NextRequest, NextResponse } from "next/server";
+import dbConfig from "@/config/db.config";
+
+dbConfig();
 
 export async function GET(req: NextRequest) {
   try {

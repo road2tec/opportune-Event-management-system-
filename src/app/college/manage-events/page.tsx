@@ -39,10 +39,46 @@ export default function ManageEventsPage() {
   });
   const [image, setImage] = useState<File | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [showUploadSuccess, setShowUploadSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
   const [isPasswordVisible, setIsPasswordVisible] = useState(false);
   const [isConfirmPasswordVisible, setIsConfirmPasswordVisible] =
     useState(false);
+
+  // Email verification states
+  const [otpSent, setOtpSent] = useState("");
+  const [isEmailVerified, setIsEmailVerified] = useState(false);
+  const [otpInput, setOtpInput] = useState("");
+
+  const verifyOrganizerEmail = async () => {
+    const email = newEvent.organizer.email;
+    if (!email || !email.includes("@") || !email.includes(".")) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
+    if (!newEvent.organizer.name) {
+      toast.error("Please enter the organizer name first");
+      return;
+    }
+    try {
+      const response = axios.post("/api/helper/verify-email", {
+        name: newEvent.organizer.name,
+        email: email,
+      });
+      toast.promise(response, {
+        loading: "Sending Verification OTP Email...",
+        success: (data: AxiosResponse) => {
+          (document.getElementById("otpContainer") as HTMLDialogElement).showModal();
+          setOtpSent(data.data.token);
+          return "Verification OTP Sent!";
+        },
+        error: (err: any) => err.response?.data?.message || "Failed to send email.",
+      });
+    } catch (error) {
+      console.log(error);
+      toast.error("Something went wrong!");
+    }
+  };
 
   const fetchEvents = async () => {
     try {
@@ -83,6 +119,7 @@ export default function ManageEventsPage() {
             ...newEvent,
             [path]: data.data.path,
           });
+          setShowUploadSuccess(true);
           return "Image Uploaded Successfully";
         },
         error: (err: unknown) => `This just happened: ${err}`,
@@ -126,6 +163,10 @@ export default function ManageEventsPage() {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(newEvent.organizer.email)) {
       toast.error("Invalid email format");
+      return false;
+    }
+    if (!isEmailVerified) {
+      toast.error("Please verify the Organizer Email first");
       return false;
     }
     if (!newEvent.organizer.phone) {
@@ -381,21 +422,35 @@ export default function ManageEventsPage() {
                 <legend className="fieldset-legend">
                   Event Organizer Email <span className="text-error">*</span>{" "}
                 </legend>
-                <input
-                  type="text"
-                  className="input input-bordered w-full"
-                  placeholder="Enter the Event organizer email"
-                  value={newEvent.organizer.email}
-                  onChange={(e) =>
-                    setNewEvent({
-                      ...newEvent,
-                      organizer: {
-                        ...newEvent.organizer,
-                        email: e.target.value.toLowerCase().trim() || "",
-                      },
-                    })
-                  }
-                />
+                <div className="join w-full">
+                  <input
+                    type="text"
+                    disabled={isEmailVerified}
+                    className="input input-bordered w-full join-item"
+                    placeholder="Enter the Event organizer email"
+                    value={newEvent.organizer.email}
+                    onChange={(e) =>
+                      setNewEvent({
+                        ...newEvent,
+                        organizer: {
+                          ...newEvent.organizer,
+                          email: e.target.value.toLowerCase().trim() || "",
+                        },
+                      })
+                    }
+                  />
+                  {newEvent.organizer.email.includes("@") &&
+                    newEvent.organizer.email.includes(".") &&
+                    newEvent.organizer.name.length > 2 && (
+                      <button
+                        type="button"
+                        className={`btn join-item ${isEmailVerified ? "btn-success text-white cursor-default" : "btn-primary"}`}
+                        onClick={verifyOrganizerEmail}
+                      >
+                        {isEmailVerified ? "Verified" : "Verify"}
+                      </button>
+                    )}
+                </div>
                 <span className="fieldset-label">
                   This will be used for Event communications and for Event
                   login.
@@ -536,7 +591,7 @@ export default function ManageEventsPage() {
               onClick={() => {
                 (
                   document.getElementById(
-                    "add-Event-modal"
+                    "add-event-modal"
                   ) as HTMLDialogElement
                 ).close();
               }}
@@ -545,6 +600,91 @@ export default function ManageEventsPage() {
               Cancel
             </button>
           </div>
+
+          {showUploadSuccess && (
+            <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+              <div className="bg-base-100 border border-success rounded-3xl w-full max-w-sm shadow-2xl p-6 text-center space-y-4 animate-fadeIn poppins">
+                <div className="w-16 h-16 bg-success/20 text-success rounded-full flex items-center justify-center mx-auto">
+                  <svg className="w-8 h-8 text-success" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth="2.5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                </div>
+                <h3 className="text-xl font-bold font-outfit text-success">Image Uploaded!</h3>
+                <p className="text-sm text-base-content/70 leading-relaxed">
+                  The event cover image has been uploaded successfully and linked!
+                </p>
+                <button 
+                  onClick={() => setShowUploadSuccess(false)} 
+                  className="btn btn-success btn-sm w-full rounded-xl text-white"
+                >
+                  Great, thanks!
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* OTP Verification modal for Event Organizer */}
+          <dialog id="otpContainer" className="modal bg-black/60 backdrop-blur-sm z-[99999]">
+            <div className="modal-box bg-base-100 border border-primary rounded-3xl p-6 space-y-6 Orbitron">
+              <button 
+                type="button"
+                className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2 text-base-content hover:text-primary transition duration-200"
+                onClick={() => (document.getElementById("otpContainer") as HTMLDialogElement).close()}
+              >
+                ✕
+              </button>
+              <h3 className="font-bold text-xl text-center text-base-content uppercase my-4">
+                Enter Organizer OTP
+              </h3>
+              
+              <div className="flex justify-center gap-3">
+                {[...Array(6)].map((_, index) => (
+                  <input
+                    key={index}
+                    type="text"
+                    maxLength={1}
+                    className="input input-bordered input-primary text-center w-11 h-11 text-lg font-semibold placeholder:text-base-content/40"
+                    value={otpInput[index] || ""}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      if (/^\d$/.test(value) || value === "") {
+                        const otp = otpInput.split("");
+                        otp[index] = value;
+                        setOtpInput(otp.join(""));
+                        if (value && index < 5) {
+                          document.getElementById(`otp-input-${index + 1}`)?.focus();
+                        }
+                      }
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === "Backspace" && !otpInput[index] && index > 0) {
+                        document.getElementById(`otp-input-${index - 1}`)?.focus();
+                      }
+                    }}
+                    id={`otp-input-${index}`}
+                    placeholder="●"
+                  />
+                ))}
+              </div>
+
+              <button
+                type="button"
+                className="btn btn-primary w-full mt-4 py-2 text-white font-bold"
+                onClick={(e) => {
+                  e.preventDefault();
+                  if (otpInput.length === 6 && otpInput === otpSent) {
+                    setIsEmailVerified(true);
+                    (document.getElementById("otpContainer") as HTMLDialogElement).close();
+                    toast.success("Event Organizer Email Verified!");
+                  } else {
+                    toast.error("Invalid OTP! Please try again.");
+                  }
+                }}
+              >
+                Verify OTP
+              </button>
+            </div>
+          </dialog>
         </div>
       </dialog>
     </>

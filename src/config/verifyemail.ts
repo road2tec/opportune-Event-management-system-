@@ -5,9 +5,11 @@ import path from "path";
 
 const transporter = nodemailer.createTransport({
   host: "smtp.gmail.com",
+  port: 465,
+  secure: true,
   auth: {
-    user: process.env.SMTP_EMAIL || "hello.novacops@gmail.com",
-    pass: process.env.SMTP_PASSWORD || "vghbbajgeqoutrtg",
+    user: process.env.SMTP_EMAIL || "projectiot1406@gmail.com",
+    pass: process.env.SMTP_PASSWORD || "xyxjtekycznhpxyo",
   },
 });
 
@@ -18,15 +20,16 @@ export default async function POST(
 ): Promise<boolean> {
   const templatePath = path.join(process.cwd(), "src/helper/mailTemplate.ejs");
   const template = fs.readFileSync(templatePath, "utf-8");
+  const senderEmail = process.env.SMTP_EMAIL || "projectiot1406@gmail.com";
   const mailOptions = {
-    from: "Raksha Vision | No Reply <",
+    from: `"UniSync OTP Verification" <${senderEmail}>`,
     to: email,
-    subject: "Verify Email",
+    subject: "Verify Your Email - UniSync",
     html: ejs.render(template, { token, name }),
   };
   try {
     await new Promise<void>((resolve, reject) => {
-      transporter.sendMail(mailOptions, (err, info) => {
+      transporter.sendMail(mailOptions, (err: any, info: any) => {
         if (err) {
           console.error(err);
           reject(err);

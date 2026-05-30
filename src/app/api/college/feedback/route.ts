@@ -8,6 +8,42 @@ import { NextRequest, NextResponse } from "next/server";
 
 dbConfig();
 
+function analyzeSentiment(comments: string, rating: number) {
+  const text = (comments || "").toLowerCase();
+  let score = 0;
+  
+  const positiveWords = ["excellent", "incredible", "great", "flawlessly", "fair", "optimized", "amazing", "smooth", "good", "perfect", "satisfied", "wonderful", "success", "best"];
+  const negativeWords = ["bad", "poor", "slow", "delay", "crash", "bug", "terrible", "worst", "unfair", "hate", "issue", "difficult", "hard", "disappointed", "poorly"];
+
+  positiveWords.forEach(w => { if (text.includes(w)) score += 1.5; });
+  negativeWords.forEach(w => { if (text.includes(w)) score -= 1.5; });
+  
+  if (rating >= 4) score += 2;
+  if (rating <= 2) score -= 2;
+
+  let sentiment: "positive" | "neutral" | "negative" = "neutral";
+  if (score > 1) sentiment = "positive";
+  else if (score < -0.5) sentiment = "negative";
+
+  let satisfaction = 50;
+  if (sentiment === "positive") satisfaction = 70 + Math.min(score * 8, 30);
+  else if (sentiment === "negative") satisfaction = Math.max(10, 40 + score * 8);
+  else satisfaction = 40 + Math.min(Math.max(score * 5, -10), 20);
+
+  const tags: string[] = [];
+  if (text.includes("judg") || text.includes("fair") || text.includes("judges")) tags.push("Judging Panel");
+  if (text.includes("time") || text.includes("delay") || text.includes("schedule") || text.includes("late")) tags.push("Time Management");
+  if (text.includes("food") || text.includes("drink") || text.includes("water") || text.includes("lunch")) tags.push("Logistics / Food");
+  if (text.includes("internet") || text.includes("wifi") || text.includes("network") || text.includes("pc")) tags.push("Technical Infra");
+  if (text.includes("rules") || text.includes("guidelines") || text.includes("instructions")) tags.push("Rule Clarity");
+
+  if (tags.length === 0) {
+    tags.push(sentiment === "negative" ? "General Issues" : "Event Quality");
+  }
+
+  return { sentiment, satisfaction, tags };
+}
+
 export async function GET(req: NextRequest) {
   try {
     const token = req.cookies.get("token")?.value;
@@ -54,12 +90,65 @@ export async function GET(req: NextRequest) {
         createdAt: new Date(Date.now() - 86400000).toISOString(),
         user: { name: "Neha Patil", profileImage: "/college-placeholder.png" },
         program: { title: "Codecraft Trivia" }
+      },
+      {
+        _id: "fb-3",
+        rating: 2,
+        comments: "The program was delayed by almost two hours, which caused confusion. Food management was bad.",
+        createdAt: new Date(Date.now() - 172800000).toISOString(),
+        user: { name: "Rahul Deshmukh", profileImage: "/college-placeholder.png" },
+        program: { title: "Robo-Sumo Clash" }
       }
     ];
 
+    const sourceFeedbacks = feedbacks.length > 0 ? feedbacks : simulatedFeedbacks;
+
+    // Apply Sentiment Analysis to each feedback
+    const analyzedFeedbacks = sourceFeedbacks.map((fb: any) => {
+      const fbObj = fb.toObject ? fb.toObject() : { ...fb };
+      const analysis = analyzeSentiment(fbObj.comments || "", fbObj.rating || 3);
+      return {
+        ...fbObj,
+        aiAnalysis: analysis
+      };
+    });
+
+    // Compute compiled analytics
+    let positiveCount = 0;
+    let neutralCount = 0;
+    let negativeCount = 0;
+    let totalSatisfaction = 0;
+    const tagCounts: Record<string, number> = {};
+
+    analyzedFeedbacks.forEach((fb: any) => {
+      const { sentiment, satisfaction, tags } = fb.aiAnalysis;
+      if (sentiment === "positive") positiveCount++;
+      else if (sentiment === "negative") negativeCount++;
+      else neutralCount++;
+
+      totalSatisfaction += satisfaction;
+
+      tags.forEach((tag: string) => {
+        tagCounts[tag] = (tagCounts[tag] || 0) + 1;
+      });
+    });
+
+    const totalCount = analyzedFeedbacks.length || 1;
+    const analytics = {
+      positivePercent: Math.round((positiveCount / totalCount) * 100),
+      neutralPercent: Math.round((neutralCount / totalCount) * 100),
+      negativePercent: Math.round((negativeCount / totalCount) * 100),
+      averageSatisfaction: Math.round(totalSatisfaction / totalCount),
+      improvementAreas: Object.entries(tagCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count)
+        .slice(0, 3)
+    };
+
     return NextResponse.json({
       success: true,
-      feedbacks: feedbacks.length > 0 ? feedbacks : simulatedFeedbacks
+      feedbacks: analyzedFeedbacks,
+      analytics
     }, { status: 200 });
   } catch (error: any) {
     console.error("Error in GET /api/college/feedback:", error);
