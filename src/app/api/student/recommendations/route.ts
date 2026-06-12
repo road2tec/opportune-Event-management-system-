@@ -42,6 +42,7 @@ export async function GET(req: NextRequest) {
     const recommendations = programs.map((prog: any) => {
       let score = 25; // Base score
       const reasons: string[] = [];
+      let isMatch = false;
 
       // 1. Match programType against student interests
       if (prog.programType && studentInterests.length > 0) {
@@ -51,6 +52,7 @@ export async function GET(req: NextRequest) {
         if (matchesInterest) {
           score += 40;
           reasons.push(`Matches your interest in ${prog.programType}`);
+          isMatch = true;
         }
       }
 
@@ -64,6 +66,7 @@ export async function GET(req: NextRequest) {
           if (inTitle || inDesc) {
             skillsMatched++;
             score += 15;
+            isMatch = true;
             if (reasons.length < 3) {
               reasons.push(`Matches your skill in ${skill}`);
             }
@@ -87,17 +90,32 @@ export async function GET(req: NextRequest) {
       return {
         program: prog,
         matchPercentage,
-        reasons
+        reasons,
+        isMatch
       };
     });
 
+    // Filter to ONLY programs that match the student profile
+    const matchedRecs = recommendations.filter(r => r.isMatch);
+
     // Sort by match percentage in descending order
-    recommendations.sort((a, b) => b.matchPercentage - a.matchPercentage);
+    matchedRecs.sort((a, b) => b.matchPercentage - a.matchPercentage);
 
     // Limit to top 5 recommendations
-    const topRecommendations = recommendations.slice(0, 5);
+    const topRecommendations = matchedRecs.slice(0, 5);
 
-    return NextResponse.json({ success: true, recommendations: topRecommendations }, { status: 200 });
+    // Also format all published programs for the fallback list
+    const allPrograms = programs.map((p: any) => ({
+      program: p,
+      matchPercentage: 0,
+      reasons: ["Available Opportunity"]
+    }));
+
+    return NextResponse.json({ 
+      success: true, 
+      recommendations: topRecommendations,
+      allEvents: allPrograms
+    }, { status: 200 });
   } catch (error: any) {
     console.error("Error in GET /api/student/recommendations:", error);
     return NextResponse.json({ success: false, message: error.message || "Internal Server Error" }, { status: 500 });

@@ -46,6 +46,7 @@ export default function StudentDashboard() {
     skillsCount: 0
   });
   const [recommendations, setRecommendations] = useState<RecommendedProgram[]>([]);
+  const [allEvents, setAllEvents] = useState<RecommendedProgram[]>([]);
   const [profileComplete, setProfileComplete] = useState(false);
 
   useEffect(() => {
@@ -75,6 +76,7 @@ export default function StudentDashboard() {
         const recRes = await axios.get("/api/student/recommendations");
         if (recRes.data.success) {
           setRecommendations(recRes.data.recommendations || []);
+          setAllEvents(recRes.data.allEvents || []);
         }
       } catch (err) {
         console.error("Error loading dashboard data:", err);
@@ -140,9 +142,14 @@ export default function StudentDashboard() {
             <IconSparkles size={24} className="text-accent animate-pulse" />
             AI Recommended Opportunities
           </h2>
-          <span className="badge badge-accent badge-sm font-bold uppercase tracking-wider px-2 shadow">
-            Powered by Opportune AI
-          </span>
+          <div className="flex items-center gap-2">
+            <span className="badge badge-primary font-bold uppercase tracking-wider px-2 shadow">
+              Recommended: {recommendations.length}
+            </span>
+            <span className="badge badge-accent badge-sm font-bold uppercase tracking-wider px-2 shadow hidden sm:inline-flex">
+              Powered by Opportune AI
+            </span>
+          </div>
         </div>
 
         {/* Profile incomplete warning */}
@@ -163,24 +170,19 @@ export default function StudentDashboard() {
 
         {/* Recommendations list */}
         {recommendations.length === 0 ? (
-          <div className="card bg-base-200 border border-base-300 p-8 rounded-3xl text-center max-w-lg mx-auto">
-            <div className="w-12 h-12 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-3">
-              <IconTarget size={24} />
+          <div className="card bg-base-200/50 border border-base-300 p-6 rounded-3xl text-center max-w-md mx-auto">
+            <div className="w-10 h-10 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-2">
+              <IconTarget size={20} />
             </div>
-            <h4 className="font-bold text-base">No Recommendations Yet</h4>
-            <p className="text-xs text-base-content/65 mt-2 leading-relaxed">
-              No published fests match your criteria, or no fests are currently active. Browse the explore tab to discover all programs.
+            <h4 className="font-bold text-sm">Recommended: 0</h4>
+            <p className="text-[11px] text-base-content/65 mt-1 leading-relaxed">
+              No matching programs found for your profile skills or interests. Update your profile or browse all available programs below.
             </p>
-            <div className="mt-4">
-              <Link href="/student/ongoing-events" className="btn btn-primary btn-sm rounded-xl text-white">
-                Browse All Programs
-              </Link>
-            </div>
           </div>
         ) : (
           /* High Fidelity Recommendation Cards */
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
-            {recommendations.map((rec, idx) => (
+            {recommendations.map((rec) => (
               <div
                 key={rec.program._id}
                 className="card bg-base-100 border border-primary/20 hover:border-primary/50 shadow-md hover:shadow-xl transition-all duration-300 rounded-3xl overflow-hidden flex flex-col justify-between relative group"
@@ -249,6 +251,84 @@ export default function StudentDashboard() {
                   >
                     View & Register
                     <IconCircleChevronRight size={14} />
+                  </Link>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* TOTAL EVENTS / ALL OPPORTUNITIES SECTION */}
+      <div className="space-y-4 pt-4">
+        <div className="flex items-center justify-between border-t border-base-200 pt-6">
+          <h2 className="text-2xl font-bold font-outfit text-primary flex items-center gap-2">
+            <IconCalendarEvent size={24} className="text-secondary" />
+            Total Events
+          </h2>
+          <span className="badge badge-secondary font-bold uppercase tracking-wider px-2 shadow">
+            All: {allEvents.length}
+          </span>
+        </div>
+
+        {allEvents.length === 0 ? (
+          <div className="card bg-base-200/50 border border-base-300 p-8 rounded-3xl text-center max-w-lg mx-auto">
+            <div className="w-12 h-12 bg-base-300 text-base-content/65 rounded-full flex items-center justify-center mx-auto mb-3">
+              <IconCalendarEvent size={24} />
+            </div>
+            <h4 className="font-bold text-base">No Events Available</h4>
+            <p className="text-xs text-base-content/65 mt-2 leading-relaxed">
+              There are no published events available at this time. Please check back later.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 pt-2">
+            {allEvents.map((item) => (
+              <div
+                key={item.program._id}
+                className="card bg-base-100 border border-base-300 hover:border-primary/40 shadow-sm hover:shadow-md transition-all duration-300 rounded-3xl overflow-hidden flex flex-col justify-between relative group"
+              >
+                <div>
+                  {/* Card Image */}
+                  <figure className="relative h-44 w-full bg-base-300/30 overflow-hidden">
+                    <Image
+                      src={item.program.coverImage || "/placeholder.jpg"}
+                      alt={item.program.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition duration-500"
+                    />
+                    <span className="absolute bottom-3 left-3 badge badge-secondary text-[10px] uppercase font-bold tracking-wider py-1 shadow">
+                      {item.program.programType}
+                    </span>
+                  </figure>
+
+                  {/* Card Body */}
+                  <div className="p-5 space-y-3">
+                    <div className="space-y-1">
+                      <span className="text-[9px] uppercase tracking-widest font-extrabold text-secondary font-outfit">
+                        {item.program.event?.title || "Opportune Event"}
+                      </span>
+                      <h3 className="font-bold text-base text-base-content leading-snug line-clamp-1 font-outfit">
+                        {item.program.title}
+                      </h3>
+                      {item.program.event?.college?.name && (
+                        <p className="text-[10px] text-base-content/50 flex items-center gap-1">
+                          <IconBuildingCommunity size={12} />
+                          {item.program.event.college.name}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Footer link to participation page */}
+                <div className="p-5 pt-0 mt-auto">
+                  <Link
+                    href={`/student/ongoing-events/program/${item.program.slug}`}
+                    className="btn btn-outline btn-secondary btn-sm w-full rounded-2xl text-xs font-bold flex items-center justify-center gap-1"
+                  >
+                    View Details
+                    <IconChevronRight size={14} />
                   </Link>
                 </div>
               </div>
